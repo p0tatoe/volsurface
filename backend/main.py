@@ -52,13 +52,42 @@ def get_data(ticker_symbol):
 async def make_table(ticker: str = Query("META")):
     try:
         options = get_data(ticker)
+        print("Available columns in options:", options.columns.tolist())
 
         calls = options[options["Type"] == "Call"]
+        print("Available columns in calls:", calls.columns.tolist())
         
-        focuseddf = calls[["daysToExpiration", "impliedVolatility", "Moneyness"]].dropna()
+        focuseddf = calls[[
+            "daysToExpiration", 
+            "impliedVolatility", 
+            "Moneyness", 
+            "contractSymbol", 
+            "lastPrice", 
+            "bid", 
+            "ask", 
+            "volume", 
+            "openInterest"
+        ]].dropna(subset=["daysToExpiration", "impliedVolatility", "Moneyness"])
 
-        print("Max IV before pruning:", focuseddf["impliedVolatility"].max())
-        print("Min IV before pruning:", focuseddf["impliedVolatility"].min())
+        desired_columns = [
+            "daysToExpiration", 
+            "impliedVolatility", 
+            "Moneyness", 
+            "contractSymbol", 
+            "lastPrice", 
+            "bid", 
+            "ask", 
+            "volume", 
+            "openInterest"
+        ]
+
+        # Ensure columns exist to prevent crash
+        for col in desired_columns:
+            if col not in calls.columns:
+                print(f"Warning: Column '{col}' missing from data. Filling with default.")
+                calls[col] = 0 if col != 'contractSymbol' else "N/A"
+        
+        focuseddf = calls[desired_columns].dropna(subset=["daysToExpiration", "impliedVolatility", "Moneyness"])
         
         # Prune outliers
         strike_range = 0.50
@@ -71,25 +100,15 @@ async def make_table(ticker: str = Query("META")):
         ].copy()
         
         # Each inner array has [x, y, z, ...]
-        data_points = pruneddf[[
-            "daysToExpiration", 
-            "impliedVolatility", 
-            "Moneyness",
-            "contractSymbol",
-            "lastPrice",
-            "bid",
-            "ask",
-            "volume",
-            "openInterest"
-        ]].fillna(0).values.tolist()
+        data_points = pruneddf[desired_columns].fillna(0).values.tolist()
         
         return data_points
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 if __name__ == '__main__':
-    # Cloud Run provides the PORT env var. Default to 8080 for local dev.
     port = int(os.environ.get("PORT", 8080))
-    # '0.0.0.0' tells Flask to listen on all available network interfaces
     app.run(host='0.0.0.0', port=port, debug=False)
