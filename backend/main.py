@@ -1,11 +1,18 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
+import os
+import uvicorn
 import yfinance as yf
 import pandas as pd
 from datetime import datetime as dt
 
-app = Flask(__name__)
-cors = CORS(app, origins='*')
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def normalize(series, new_min=0, new_max=1):
     min_value = series.min()
@@ -41,12 +48,9 @@ def get_data(ticker_symbol):
     
     return all_options
 
-@app.route('/options-data', methods=['GET'])
-
-def make_table():
+@app.get('/options-data')
+async def make_table(ticker: str = Query("META")):
     try:
-        ticker = request.args.get('ticker', 'META')
-
         options = get_data(ticker)
 
         calls = options[options["Type"] == "Call"]
@@ -69,16 +73,13 @@ def make_table():
         # Each inner array has [x, y, z] = [daysToExpiration, impliedVolatility, Moneyness]
         data_points = pruneddf[["daysToExpiration", "impliedVolatility", "Moneyness"]].values.tolist()
         
-        # Debug - log the shape and first few points
-        print(f"Returning {len(data_points)} data points")
-        if len(data_points) > 0:
-            print(f"First point: {data_points[0]}")
-        
-        # Return the data as a JSON array of arrays
-        return jsonify(data_points)
-    
+        return data_points
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return {"error": str(e)}
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Cloud Run provides the PORT env var. Default to 8080 for local dev.
+    port = int(os.environ.get("PORT", 8080))
+    # '0.0.0.0' tells Flask to listen on all available network interfaces
+    app.run(host='0.0.0.0', port=port, debug=False)
