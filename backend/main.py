@@ -70,8 +70,18 @@ async def make_table(ticker: str = Query("META")):
             (focuseddf['daysToExpiration'] <= 61)
         ].copy()
         
-        # Each inner array has [x, y, z] = [daysToExpiration, impliedVolatility, Moneyness]
-        data_points = pruneddf[["daysToExpiration", "impliedVolatility", "Moneyness"]].values.tolist()
+        # Each inner array has [x, y, z, ...]
+        data_points = pruneddf[[
+            "daysToExpiration", 
+            "impliedVolatility", 
+            "Moneyness",
+            "contractSymbol",
+            "lastPrice",
+            "bid",
+            "ask",
+            "volume",
+            "openInterest"
+        ]].fillna(0).values.tolist()
         
         return data_points
 

@@ -36,7 +36,10 @@ const app = {
         ticker: '',
         expirations: [],
         strikes: [],
-        volatilityGrid: []
+        expirations: [],
+        strikes: [],
+        volatilityGrid: [],
+        infoGrid: []
     },
     settings: {
         colorScheme: 'viridis'
@@ -80,8 +83,6 @@ const app = {
         // Setup event listeners
         window.addEventListener('resize', this.onWindowResize.bind(this));
         document.getElementById('loadButton').addEventListener('click', this.loadData.bind(this));
-
-
 
         // Mouse events for raycasting
         window.addEventListener('mousemove', (event) => {
@@ -138,10 +139,20 @@ const app = {
                         const expiration = this.data.expirations[yIndex];
                         const iv = this.data.volatilityGrid[yIndex][xIndex];
 
-                        document.getElementById('hoverInfo').innerHTML =
-                            `Strike: ${strike.toFixed(2)}<br>` +
+                        const info = this.data.infoGrid[yIndex][xIndex];
+
+                        let infoHtml = `Strike: ${strike.toFixed(2)}<br>` +
                             `Days to Expiry: ${expiration}<br>` +
                             `Implied Volatility: ${(iv * 100).toFixed(2)}%`;
+
+                        if (info) {
+                            infoHtml += `<br><br><strong>${info.symbol}</strong><br>` +
+                                `Price: $${info.lastPrice}<br>` +
+                                `Bid/Ask: ${info.bid}/${info.ask}<br>` +
+                                `Vol/OI: ${info.volume}/${info.openInterest}`;
+                        }
+
+                        document.getElementById('hoverInfo').innerHTML = infoHtml;
 
                         // Update highlight point
                         if (this.highlightPoint) {
@@ -151,64 +162,12 @@ const app = {
                             const gridZ = yIndex / (this.data.expirations.length - 1); // 0 to 1
                             const gridY = iv !== null ? iv : 0; // Should be valid if we are here
 
-                            // Remap to world coordinates (same logic as in createVolatilitySurface)
-                            // Actually, the vertices x, y, z from intersections above are technically
-                            // one of the triangle vertices, but possibly not the *exact* grid node we rounded to.
-                            // Let's re-calculate world position from indices to be precise.
-                            // normalizeData result was used to build mesh... wait, createVolatilitySurface logic:
-                            // x = j / (cols - 1), z = i / (rows - 1), y = normalizedData[i][j]
-                            // THEN mesh position is -4, scale 8. (0->-4, 1->4)
-                            // World = Local * Scale + Position
-                            // LocalX = xIndex / (strikes.length - 1)
-                            // LocalZ = yIndex / (expirations.length - 1)
-                            // LocalY = normalized value... wait, we need the normalized value.
-
-                            // We don't have the normalized value readily available here unless we re-normalize or store it.
-                            // But we do have 'iv' which is the raw value.
-                            // We need to re-normalize 'iv' to get local Y.
-                            // Or just use the intersection point y? Intersection point is on the face, close enough.
-                            // But for "snapping" effect, we prefer the exact grid node.
-
-                            // Let's grab the normalized Y from the mesh geometry if possible, or re-calculate.
-                            // Simplest: use the raw IV and re-normalize if we had min/max.
-                            // We lost min/max.
-
-                            // Alternative: Access the position attribute at the specific index.
-                            // The geometry is built from triangles... hard to find exact vertex index for grid (i,j).
-
-                            // Let's rely on the fact that we can get nearest point from intersection point.
-                            // The intersection point is ON the surface. The grid point is a vertex of that surface.
-                            // We can just snap the intersection point to the nearest grid coord in world space.
-
-                            // World bounds: X: [-4, 4], Z: [-4, 4], Y: [0, 4] (roughly/scaled)
-                            // Actually mesh scale is 8, 4, 8. Position -4, 0, -4.
-                            // So local [0,1] -> World [-4, 4].
-
                             const localX = xIndex / (this.data.strikes.length - 1);
                             const localZ = yIndex / (this.data.expirations.length - 1);
 
                             const worldX = localX * 8 - 4;
                             const worldZ = localZ * 8 - 4;
 
-                            // For Y, we have to find the Y value at this grid point.
-                            // We can trace a ray or just search?
-                            // Better: We have `this.volatilitySurface` and we know the indices.
-                            // But the geometry is non-indexed usually or complex.
-
-                            // Wait, `this.pointsMesh` has all the points!
-                            // And they are ordered?
-                            // In createVolatilitySurface:
-                            // for i.. for j.. pointVertices.push(x, y, z)
-                            // So index = i * cols + j. 
-                            // But we only pushed VALID points (y !== null). 
-                            // So indices might be shifted if there are nulls.
-
-                            // If we assume full grid (filled), it's easy.
-                            // We filled missing values, so it IS full?
-                            // Yes, `fillMissingValues` runs before creation.
-
-                            // So index = yIndex * cols + xIndex.
-                            // Let's verify cols count.
                             const cols = this.data.strikes.length;
                             const index = yIndex * cols + xIndex;
 
@@ -247,10 +206,7 @@ const app = {
 
         try {
             // Fetch data from the backend
-            const response = await fetch('http://127.0.0.1:5000/options-data?ticker=' + ticker); // Note: Backend currently hardcodes "META", we might need to update backend to accept ticker param too, but plan was just removal first. Wait, backend DOES hardcode META. The user said "get rid of ANY simulated data", hardcoded ticker in backend is also kind of "fake" if it ignores input. 
-            // Let's stick to the plan: remove simulated data.
-            // However, the backend `make_table` function hardcodes `ticker = "META"`. 
-            // I should probably fix that too to make it "work" as a real project.
+            const response = await fetch('https://volsurface-backend-564066987828.us-central1.run.app/options-data?ticker=' + ticker);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -265,10 +221,6 @@ const app = {
             if (!Array.isArray(data) || data.length === 0) {
                 throw new Error("No data received");
             }
-
-            // Process the received data
-            // Data format is [[daysToExpiration, impliedVolatility, Moneyness], ...]
-            // We need to reconstruct the grid structure expected by createVolatilitySurface
 
             this.processReceivedData(data);
 
@@ -293,18 +245,7 @@ const app = {
     },
 
     processReceivedData(points) {
-        // Points are [daysToExpiration, impliedVolatility, Moneyness]
-        // We need to map this back to a grid of Strikes x Expirations
 
-        // 1. Extract unique sorted expirations and strikes (derived from Moneyness)
-        // Note: Moneyness = CurrentPrice / Strike  => Strike = CurrentPrice / Moneyness.
-        // But we don't have CurrentPrice here easily unless we fetch it or infer it.
-        // Let's rely on Moneyness for the X axis directly as the backend provides it.
-
-        // Let's assume the backend provides specific strikes/expirations, but it returns a flat list of points.
-        // We need to bucket them into a grid.
-
-        // Extract unique values
         const expirationsSet = new Set(points.map(p => p[0])); // daysToExpiration
         const moneynessSet = new Set(points.map(p => p[2])); // Moneyness
 
@@ -318,15 +259,21 @@ const app = {
         this.data.volatilityGrid = Array(this.data.expirations.length).fill().map(() =>
             Array(this.data.strikes.length).fill(null)
         );
+        this.data.infoGrid = Array(this.data.expirations.length).fill().map(() =>
+            Array(this.data.strikes.length).fill(null)
+        );
 
         // Fill the grid with known values
         points.forEach(point => {
-            const [expiry, iv, moneyness] = point;
+            const [expiry, iv, moneyness, symbol, lastPrice, bid, ask, volume, openInterest] = point;
             const expIdx = this.data.expirations.indexOf(expiry);
             const monIdx = this.data.strikes.indexOf(moneyness);
 
             if (expIdx !== -1 && monIdx !== -1) {
                 this.data.volatilityGrid[expIdx][monIdx] = iv;
+                this.data.infoGrid[expIdx][monIdx] = {
+                    symbol, lastPrice, bid, ask, volume, openInterest
+                };
             }
         });
 
@@ -674,11 +621,7 @@ const app = {
         }
 
         // Y-Axis Ticks (IV)
-        // Values are normalized 0-1, need to map back to original min/max if we saved them in normalizeData
-        // We didn't save min/max in normalizeData clearly. Let's create a simpler way or just scan grid again? 
-        // Better: store IV range in this.data during normalize.
-        // For now, let's re-scan smoothed data to find range.
-        const smoothedData = this.data.volatilityGrid; // No smoothing
+        const smoothedData = this.data.volatilityGrid;
         let minIV = Infinity;
         let maxIV = -Infinity;
         for (let row of smoothedData) {
