@@ -373,7 +373,8 @@ const app = {
                 const z = i / (normalizedData.length - 1);
                 const y = normalizedData[i][j];
 
-                if (y !== null) {
+                // Only show points that have actual contract data (contract info exists)
+                if (y !== null && this.data.infoGrid[i] && this.data.infoGrid[i][j]) {
                     validPoints.push({ x, y, z });
                 }
             }

@@ -52,10 +52,8 @@ def get_data(ticker_symbol):
 async def make_table(ticker: str = Query("META")):
     try:
         options = get_data(ticker)
-        print("Available columns in options:", options.columns.tolist())
-
+        
         calls = options[options["Type"] == "Call"]
-        print("Available columns in calls:", calls.columns.tolist())
         
         focuseddf = calls[[
             "daysToExpiration", 
