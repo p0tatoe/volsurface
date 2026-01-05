@@ -20,13 +20,13 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'stock-backend'
+      - 'volsurface-backend'
       - '--image'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--service-account'
-      - 'stock-api-runner@$PROJECT_ID.iam.gserviceaccount.com'
+      - 'volsurface-api-runner@$PROJECT_ID.iam.gserviceaccount.com'
       - '--allow-unauthenticated'
 
 # Store the image path so Cloud Build keeps track of it
