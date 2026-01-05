@@ -1,0 +1,34 @@
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build Image'
+    args: [
+      'build', 
+      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA',
+      './backend'
+    ]
+
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'Push Image'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA']
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy to Cloud Run'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'stock-backend'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--service-account'
+      - 'stock-api-runner@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--allow-unauthenticated'
+
+# Store the image path so Cloud Build keeps track of it
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA'
