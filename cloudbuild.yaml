@@ -32,3 +32,6 @@ steps:
 # Store the image path so Cloud Build keeps track of it
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
