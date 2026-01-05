@@ -4,14 +4,14 @@ steps:
     id: 'Build Image'
     args: [
       'build', 
-      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA',
+      '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/volsurface/stock-backend:$SHORT_SHA',
       './backend'
     ]
 
   # Step 2: Push the image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Image'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA']
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/volsurface/stock-backend:$SHORT_SHA']
 
   # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -22,7 +22,7 @@ steps:
       - 'deploy'
       - 'volsurface-backend'
       - '--image'
-      - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/volsurface/stock-backend:$SHORT_SHA'
       - '--region'
       - 'us-central1'
       - '--service-account'
@@ -31,7 +31,7 @@ steps:
 
 # Store the image path so Cloud Build keeps track of it
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/my-docker-repo/stock-backend:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/volsurface/stock-backend:$SHORT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
