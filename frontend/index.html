@@ -1,29 +1,34 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Volatility Surface</title>
-  </head>
 
-  <body>
-    <div id="container">
-      <div id="info">
-          <h2>Volatility Surface</h2>
-          <p>Hover over surface to see data points</p>
-          <div id="hoverInfo">-</div>
-      </div>
-      <div id="controls">
-          <h3>Controls</h3>
-          <input type="text" id="ticker" placeholder="Enter ticker (e.g., AAPL)" value="AAPL">
-          <button id="loadButton">Load Data</button>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Volatility Surface</title>
+</head>
 
-
-            <div id="dataInfo"></div>
-        </div>
+<body>
+  <div id="container">
+    <div id="info">
+      <h2>Volatility Surface</h2>
+      <p>Hover over surface to see data points</p>
+      <div id="hoverInfo">-</div>
     </div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+    <div id="controls">
+      <h3>Controls</h3>
+      <input type="text" id="ticker" placeholder="Enter ticker (e.g., AAPL)" value="AAPL">
+      <select id="optionType">
+        <option value="Call">Call</option>
+        <option value="Put">Put</option>
+      </select>
+      <button id="loadButton">Load Data</button>
+
+
+      <div id="dataInfo"></div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
 
 </html>

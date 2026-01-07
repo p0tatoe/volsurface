@@ -49,13 +49,14 @@ def get_data(ticker_symbol):
     return all_options
 
 @app.get('/options-data')
-async def make_table(ticker: str = Query("META")):
+async def make_table(ticker: str = Query("META"), type: str = Query("Call")):
     try:
         options = get_data(ticker)
         
-        calls = options[options["Type"] == "Call"]
+        # Filter by the requested type (Call or Put)
+        filtered_df = options[options["Type"] == type]
         
-        focuseddf = calls[[
+        focuseddf = filtered_df[[
             "daysToExpiration", 
             "impliedVolatility", 
             "Moneyness", 
@@ -81,11 +82,11 @@ async def make_table(ticker: str = Query("META")):
 
         # Ensure columns exist to prevent crash
         for col in desired_columns:
-            if col not in calls.columns:
+            if col not in filtered_df.columns:
                 print(f"Warning: Column '{col}' missing from data. Filling with default.")
-                calls[col] = 0 if col != 'contractSymbol' else "N/A"
+                filtered_df[col] = 0 if col != 'contractSymbol' else "N/A"
         
-        focuseddf = calls[desired_columns].dropna(subset=["daysToExpiration", "impliedVolatility", "Moneyness"])
+        focuseddf = filtered_df[desired_columns].dropna(subset=["daysToExpiration", "impliedVolatility", "Moneyness"])
         
         # Prune outliers
         strike_range = 0.50
