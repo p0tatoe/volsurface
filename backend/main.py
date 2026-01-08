@@ -43,7 +43,23 @@ def get_data(ticker_symbol):
     all_options['Expiry'] = pd.to_datetime(all_options['Expiry'])
     all_options['daysToExpiration'] = (all_options['Expiry'] - pd.to_datetime(all_options['Date'])).dt.days
     
-    current_price = ticker.info['currentPrice']
+    today = dt.now().strftime('%Y-%m-%d')
+    try:
+        data = yf.download(ticker_symbol, period='1d', interval='1m')
+        current_price = data['Close'].iloc[-1]
+        if isinstance(current_price, pd.Series):
+             current_price = current_price.item()
+    except Exception:
+        # Fallback if download fails
+        info = ticker.info
+        current_price = (
+            info.get('currentPrice') or
+            info.get('regularMarketPrice') or
+            info.get('previousClose') or
+            info.get('open') or
+            0
+        )
+
     all_options["Moneyness"] = current_price / all_options["strike"]
     
     return all_options

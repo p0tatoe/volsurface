@@ -92,7 +92,7 @@ export class SurfaceVisualizer {
                 // Add colors based on y values
                 [y1, y2, y3, y2, y4, y3].forEach(y => {
                     const colorIndex = Math.min(
-                        Math.floor(y * colorScheme.length),
+                        Math.floor(y * (colorScheme.length - 1)),
                         colorScheme.length - 1
                     );
                     const color = colorScheme[colorIndex];
@@ -121,10 +121,12 @@ export class SurfaceVisualizer {
         geometry.computeVertexNormals();
 
         // Create material
-        const material = new THREE.MeshPhongMaterial({
+        // Create material
+        const material = new THREE.MeshStandardMaterial({
             vertexColors: true,
             side: THREE.DoubleSide,
-            shininess: 0,
+            roughness: 0.5,
+            metalness: 0.1,
             flatShading: true
         });
 

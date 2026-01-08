@@ -31,13 +31,16 @@ export class App {
 
         // Start animation loop
         this.animate();
+
+        // Load default data
+        this.loadData();
     }
 
     async loadData() {
         const tickerInput = document.getElementById('ticker');
         const ticker = tickerInput.value.toUpperCase();
-        const typeSelect = document.getElementById('optionType');
-        const type = typeSelect ? typeSelect.value : 'Call';
+        const toggle = document.getElementById('optionTypeToggle');
+        const type = toggle && toggle.checked ? 'Put' : 'Call';
 
         if (!ticker) return;
 

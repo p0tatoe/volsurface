@@ -17,11 +17,15 @@
     </div>
     <div id="controls">
       <h3>Controls</h3>
-      <input type="text" id="ticker" placeholder="Enter ticker (e.g., AAPL)" value="AAPL">
-      <select id="optionType">
-        <option value="Call">Call</option>
-        <option value="Put">Put</option>
-      </select>
+      <input type="text" id="ticker" placeholder="Enter ticker (e.g., AAPL)" value="SPY">
+      <div class="toggle-container">
+        <span class="toggle-label">Calls</span>
+        <label class="switch">
+          <input type="checkbox" id="optionTypeToggle">
+          <span class="slider round"></span>
+        </label>
+        <span class="toggle-label">Puts</span>
+      </div>
       <button id="loadButton">Load Data</button>
 
 
