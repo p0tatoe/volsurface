@@ -24,28 +24,41 @@ def get_data(ticker_symbol):
     ticker = yf.Ticker(ticker_symbol)
     
     options_dates = ticker.options
+    
+    if not options_dates:
+        print(f"No options found for {ticker_symbol}")
+        return pd.DataFrame()
+
     all_options = pd.DataFrame()
     
     for date in options_dates:
-        opt = ticker.option_chain(date)
-        calls = opt.calls
-        calls['Expiry'] = date
-        calls['Type'] = 'Call'
-        
-        puts = opt.puts
-        puts['Expiry'] = date
-        puts['Type'] = 'Put'
-        
-        options = pd.concat([calls, puts])
-        all_options = pd.concat([all_options, options])
-    
+        try:
+            opt = ticker.option_chain(date)
+            calls = opt.calls
+            if not calls.empty:
+                calls['Expiry'] = date
+                calls['Type'] = 'Call'
+                all_options = pd.concat([all_options, calls])
+            
+            puts = opt.puts
+            if not puts.empty:
+                puts['Expiry'] = date
+                puts['Type'] = 'Put'
+                all_options = pd.concat([all_options, puts])
+        except Exception as e:
+            print(f"Error fetching options for {date}: {e}")
+            continue
+            
+    if all_options.empty:
+        return pd.DataFrame()
+
     all_options['Date'] = dt.now().strftime('%Y-%m-%d')
     all_options['Expiry'] = pd.to_datetime(all_options['Expiry'])
     all_options['daysToExpiration'] = (all_options['Expiry'] - pd.to_datetime(all_options['Date'])).dt.days
     
     today = dt.now().strftime('%Y-%m-%d')
     try:
-        data = yf.download(ticker_symbol, period='1d', interval='1m')
+        data = yf.download(ticker_symbol if not ticker_symbol.startswith('^') and options_dates else ticker.ticker, period='1d', interval='1m')
         current_price = data['Close'].iloc[-1]
         if isinstance(current_price, pd.Series):
              current_price = current_price.item()
@@ -60,6 +73,7 @@ def get_data(ticker_symbol):
             0
         )
 
+    all_options["strike"] = pd.to_numeric(all_options["strike"], errors='coerce')
     all_options["Moneyness"] = current_price / all_options["strike"]
     
     return all_options
@@ -69,6 +83,9 @@ async def make_table(ticker: str = Query("META"), type: str = Query("Call")):
     try:
         options = get_data(ticker)
         
+        if options.empty:
+            return []
+            
         # Filter by the requested type (Call or Put)
         filtered_df = options[options["Type"] == type]
         

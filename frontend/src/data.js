@@ -10,7 +10,7 @@ export class DataManager {
         };
     }
 
-    async loadData(ticker, type = 'Call') {
+    async loadData(ticker, type = 'Call', minVolume = 0, minOpenInterest = 0) {
         if (!ticker) return;
 
         this.data.ticker = ticker;
@@ -22,6 +22,8 @@ export class DataManager {
             const response = await fetch(`https://volsurface-backend-564066987828.us-central1.run.app/options-data?ticker=${ticker}&type=${type}`);
 
             if (!response.ok) {
+                // Determine if it might be a 500 error due to missing data vs other errors
+                // But generally, handle as generic load error or specific if status is 404
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -32,10 +34,11 @@ export class DataManager {
             }
 
             if (!Array.isArray(data) || data.length === 0) {
-                throw new Error("No data received");
+                throw new Error(`No data found for ${ticker}. If you are searching for an index, remember to add the ^`);
             }
 
-            this.processReceivedData(data);
+            this.rawPoints = data; // Store raw data for reprocessing
+            this.processReceivedData(data, minVolume, minOpenInterest);
 
             return this.data;
 
@@ -45,7 +48,13 @@ export class DataManager {
         }
     }
 
-    processReceivedData(points) {
+    reprocessData(minVolume, minOpenInterest) {
+        if (this.rawPoints) {
+            this.processReceivedData(this.rawPoints, minVolume, minOpenInterest);
+        }
+    }
+
+    processReceivedData(points, minVolume = 0, minOpenInterest = 0) {
         const expirationsSet = new Set(points.map(p => p[0])); // daysToExpiration
         const moneynessSet = new Set(points.map(p => p[2])); // Moneyness
 
@@ -66,6 +75,12 @@ export class DataManager {
         // Fill the grid with known values
         points.forEach(point => {
             const [expiry, iv, moneyness, symbol, lastPrice, bid, ask, volume, openInterest] = point;
+
+            // Filter check
+            if (volume < minVolume || openInterest < minOpenInterest) {
+                return;
+            }
+
             const expIdx = this.data.expirations.indexOf(expiry);
             const monIdx = this.data.strikes.indexOf(moneyness);
 

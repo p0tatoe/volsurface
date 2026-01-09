@@ -37,5 +37,7 @@ export const colorSchemes = {
 };
 
 export const defaultSettings = {
-    colorScheme: 'turbo'
+    colorScheme: 'turbo',
+    minVolume: 5,
+    minOpenInterest: 1
 };

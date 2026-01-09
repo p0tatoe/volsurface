@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 export class LabelManager {
     constructor(scene) {
@@ -8,11 +9,10 @@ export class LabelManager {
 
     createLabels(data, settings) {
         // Clear previous labels
-        if (this.labelGroup) {
+        if (this.labelGroup && this.labelGroup.traverse) {
             this.labelGroup.traverse((object) => {
-                if (object.isMesh || object.isSprite) {
-                    if (object.material.map) object.material.map.dispose();
-                    object.material.dispose();
+                if (object.isCSS2DObject) {
+                    object.removeFromParent();
                 }
             });
             this.scene.remove(this.labelGroup);
@@ -22,9 +22,9 @@ export class LabelManager {
         this.scene.add(this.labelGroup);
 
         // --- Axis Titles ---
-        this.addTextLabel('Strike Price', new THREE.Vector3(0, 0, 5.5));
-        this.addTextLabel('Days to Expiry', new THREE.Vector3(-5.5, 0, 0));
-        this.addTextLabel('Implied Volatility (%)', new THREE.Vector3(0, 5.5, 0));
+        this.addTextLabel('Strike Price', new THREE.Vector3(0, 0, 7.0));
+        this.addTextLabel('Days to Expiry', new THREE.Vector3(-7.5, 0, 0));
+        this.addTextLabel('Implied Volatility (%)', new THREE.Vector3(-5.5, 4.5, -5.5));
 
         // --- Tick Labels ---
 
@@ -37,7 +37,7 @@ export class LabelManager {
                 const t = i / xSteps;
                 const worldX = -4 + t * 8;
                 const value = minStrike + t * (maxStrike - minStrike);
-                this.addTickLabel(value.toFixed(2), new THREE.Vector3(worldX, 0, 4.5));
+                this.addTickLabel(value.toFixed(2), new THREE.Vector3(worldX, 0, 5.5));
             }
         }
 
@@ -50,7 +50,7 @@ export class LabelManager {
                 const t = i / zSteps;
                 const worldZ = -4 + t * 8;
                 const value = minExp + t * (maxExp - minExp);
-                this.addTickLabel(Math.round(value).toString(), new THREE.Vector3(-4.5, 0, worldZ));
+                this.addTickLabel(Math.round(value).toString(), new THREE.Vector3(-5.5, 0, worldZ));
             }
         }
 
@@ -73,53 +73,43 @@ export class LabelManager {
                 const t = i / ySteps;
                 const worldY = 0 + t * 4; // Height is 4
                 const value = minIV + t * (maxIV - minIV);
-                this.addTickLabel((value * 100).toFixed(0) + '%', new THREE.Vector3(4.5, worldY, -4.5));
+                this.addTickLabel((value * 100).toFixed(0) + '%', new THREE.Vector3(-5.5, worldY, -5.5), 'right');
             }
         }
     }
 
-    addTextLabel(text, position, color = 0xffffff) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 512;
-        canvas.height = 128;
+    addTextLabel(text, position, color = '#ffffff') {
+        const div = document.createElement('div');
+        div.className = 'label';
+        div.textContent = text;
+        div.style.marginTop = '-1em'; // Center vertically
+        div.style.color = color;
+        div.style.fontFamily = 'Arial, sans-serif';
+        div.style.fontSize = '16px';
+        div.style.fontWeight = 'bold';
+        div.style.textShadow = '1px 1px 2px black';
+        div.style.pointerEvents = 'none';
+        div.style.whiteSpace = 'nowrap';
 
-        context.fillStyle = 'rgba(0,0,0,0)'; // Transparent
-        context.clearRect(0, 0, canvas.width, canvas.height);
-
-        context.font = 'bold 48px Arial';
-        context.fillStyle = '#ffffff';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillText(text, canvas.width / 2, canvas.height / 2);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: texture });
-        const sprite = new THREE.Sprite(material);
-        sprite.position.copy(position);
-        sprite.scale.set(2, 0.5, 1);
-
-        this.labelGroup.add(sprite);
+        const label = new CSS2DObject(div);
+        label.position.copy(position);
+        this.labelGroup.add(label);
     }
 
-    addTickLabel(text, position) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 256;
-        canvas.height = 64;
+    addTickLabel(text, position, align = 'center') {
+        const div = document.createElement('div');
+        div.className = 'tick-label';
+        div.textContent = text;
+        div.style.color = 'white';
+        div.style.fontFamily = 'Arial, sans-serif';
+        div.style.fontSize = '12px';
+        div.style.textShadow = '1px 1px 2px black';
+        div.style.pointerEvents = 'none';
+        div.style.whiteSpace = 'nowrap';
+        div.style.textAlign = align;
 
-        context.font = 'bold 40px Arial';
-        context.fillStyle = '#ffffff';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillText(text, canvas.width / 2, canvas.height / 2);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: texture });
-        const sprite = new THREE.Sprite(material);
-        sprite.position.copy(position);
-        sprite.scale.set(1, 0.25, 1); // Maintain world scale
-
-        this.labelGroup.add(sprite);
+        const label = new CSS2DObject(div);
+        label.position.copy(position);
+        this.labelGroup.add(label);
     }
 }

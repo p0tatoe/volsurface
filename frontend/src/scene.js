@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/Addons.js';
+import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
 
 export class SceneManager {
     constructor(containerId) {
@@ -7,7 +8,9 @@ export class SceneManager {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
+        this.labelRenderer = null;
         this.controls = null;
+
 
         this.init();
     }
@@ -19,12 +22,21 @@ export class SceneManager {
 
         // Setup camera
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(5, 5, 5);
+        this.camera.position.set(-7, 7, 7);
 
         // Setup renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.container.appendChild(this.renderer.domElement);
+
+        // Setup label renderer
+        this.labelRenderer = new CSS2DRenderer();
+        this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        this.labelRenderer.domElement.style.position = 'absolute';
+        this.labelRenderer.domElement.style.top = '0px';
+        this.labelRenderer.domElement.style.pointerEvents = 'none';
+        this.container.appendChild(this.labelRenderer.domElement);
 
         // Setup orbit controls
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -55,6 +67,8 @@ export class SceneManager {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
     }
 
     update() {
@@ -63,5 +77,6 @@ export class SceneManager {
 
     render() {
         this.renderer.render(this.scene, this.camera);
+        this.labelRenderer.render(this.scene, this.camera);
     }
 }
