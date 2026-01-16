@@ -27,18 +27,28 @@ export class DataManager {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
+            const jsonResponse = await response.json();
 
-            if (data.error) {
-                throw new Error(data.error);
+            if (jsonResponse.error) {
+                throw new Error(jsonResponse.error);
             }
 
-            if (!Array.isArray(data) || data.length === 0) {
+            let dataPoints;
+            if (Array.isArray(jsonResponse)) {
+                dataPoints = jsonResponse;
+            } else if (jsonResponse.data && Array.isArray(jsonResponse.data)) {
+                dataPoints = jsonResponse.data;
+                this.data.timestamp = jsonResponse.timestamp;
+            } else {
+                throw new Error(`Unexpected data format for ${ticker}`);
+            }
+
+            if (dataPoints.length === 0) {
                 throw new Error(`No data found for ${ticker}. If you are searching for an index, remember to add the ^`);
             }
 
-            this.rawPoints = data; // Store raw data for reprocessing
-            this.processReceivedData(data, minVolume, minOpenInterest);
+            this.rawPoints = dataPoints; // Store raw data for reprocessing
+            this.processReceivedData(dataPoints, minVolume, minOpenInterest);
 
             return this.data;
 

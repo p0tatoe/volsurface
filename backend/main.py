@@ -134,7 +134,12 @@ async def make_table(ticker: str = Query("META"), type: str = Query("Call")):
         # Each inner array has [x, y, z, ...]
         data_points = pruneddf[desired_columns].fillna(0).values.tolist()
         
-        return data_points
+        data_points = pruneddf[desired_columns].fillna(0).values.tolist()
+        
+        return {
+            "data": data_points,
+            "timestamp": dt.now().isoformat()
+        }
 
     except Exception as e:
         import traceback

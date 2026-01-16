@@ -88,6 +88,27 @@ export class App {
                 `${this.dataManager.data.expirations.length} expirations<br>` +
                 `${this.dataManager.data.strikes.length} strikes`;
 
+            // Update Dynamic Title
+            const titleElement = document.getElementById('dynamicTitle');
+            if (titleElement) {
+                let timeString = '';
+                if (this.dataManager.data.timestamp) {
+                    const date = new Date(this.dataManager.data.timestamp);
+                    // Format: 1/15/2026 4:30 ET
+                    const options = {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: 'numeric',
+                        timeZone: 'America/New_York',
+                        timeZoneName: 'short'
+                    };
+                    timeString = new Intl.DateTimeFormat('en-US', options).format(date);
+                }
+                titleElement.textContent = `${ticker} as of ${timeString}`;
+            }
+
             // Visualize
             this.surfaceVisualizer.createVolatilitySurface(this.dataManager, this.settings);
             this.labelManager.createLabels(this.dataManager.data, this.settings);

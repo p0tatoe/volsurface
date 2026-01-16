@@ -22,8 +22,8 @@ export class LabelManager {
         this.scene.add(this.labelGroup);
 
         // --- Axis Titles ---
-        this.addTextLabel('Strike Price', new THREE.Vector3(0, 0, 7.0));
-        this.addTextLabel('Days to Expiry', new THREE.Vector3(-7.5, 0, 0));
+        this.addTextLabel('Strike Price', new THREE.Vector3(0, 0, 7));
+        this.addTextLabel('Days to Expiry', new THREE.Vector3(-7, 0, 0));
         this.addTextLabel('Implied Volatility (%)', new THREE.Vector3(-5.5, 4.5, -5.5));
 
         // --- Tick Labels ---

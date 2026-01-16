@@ -28,6 +28,19 @@ body {
     max-width: 300px;
 }
 
+#dynamicTitle {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px black;
+    z-index: 1000;
+    pointer-events: none;
+}
+
 #controls {
     position: absolute;
     top: 10px;
