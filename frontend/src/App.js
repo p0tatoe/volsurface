@@ -58,6 +58,12 @@ export class App {
 
         // Load default data
         this.loadDefaultData();
+
+        // Wake up backend to reduce latency for subsequent requests
+        this.dataManager.wakeupBackend();
+
+        // Refresh data in background
+        this.refreshBackgroundData();
     }
 
     loadDefaultData() {
@@ -162,6 +168,58 @@ export class App {
             if (document.getElementById('container').contains(loadingDiv)) {
                 document.getElementById('container').removeChild(loadingDiv);
             }
+        }
+    }
+
+    async refreshBackgroundData() {
+        // Only refresh if the user hasn't changed the ticker
+        const tickerInput = document.getElementById('ticker');
+        if (tickerInput.value.toUpperCase() !== 'SPY') return;
+
+        console.log("Fetching background data for SPY...");
+        try {
+            // 1. Fetch raw data without affecting current state
+            const rawData = await this.dataManager.fetchRawData("SPY", "Call");
+
+            // 2. Update default data cache
+            this.dataManager.updateDefault(rawData);
+
+            // 3. Re-check just in case user changed ticker while fetching
+            if (tickerInput.value.toUpperCase() !== 'SPY') return;
+
+            // Load the newly cached default data and process it
+            this.dataManager.loadDefault();
+            this.dataManager.reprocessData(this.settings.minVolume, this.settings.minOpenInterest);
+
+            // Update UI
+            document.getElementById('dataInfo').innerHTML =
+                `<strong>SPY</strong><br>` +
+                `${this.dataManager.data.expirations.length} expirations<br>` +
+                `${this.dataManager.data.strikes.length} strikes`;
+
+            const titleElement = document.getElementById('dynamicTitle');
+            if (titleElement && this.dataManager.data.timestamp) {
+                const date = new Date(this.dataManager.data.timestamp);
+                const options = {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    timeZone: 'America/New_York',
+                    timeZoneName: 'short'
+                };
+                const timeString = new Intl.DateTimeFormat('en-US', options).format(date);
+                titleElement.textContent = `SPY as of ${timeString}`;
+            }
+
+            // Update visualization
+            this.surfaceVisualizer.createVolatilitySurface(this.dataManager, this.settings);
+            this.labelManager.createLabels(this.dataManager.data, this.settings);
+            console.log("Background data refresh complete.");
+
+        } catch (error) {
+            console.warn("Background data refresh failed:", error);
         }
     }
 

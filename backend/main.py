@@ -146,6 +146,11 @@ async def make_table(ticker: str = Query("META"), type: str = Query("Call")):
         traceback.print_exc()
         return {"error": str(e)}
 
+@app.get("/")
+async def health_check():
+    return {"status": "ok"}
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port, debug=False)

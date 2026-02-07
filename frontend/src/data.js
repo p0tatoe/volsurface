@@ -10,36 +10,35 @@ export class DataManager {
             volatilityGrid: [],
             infoGrid: []
         };
+        // Initialize default data cache
+        this.defaultData = { ...DEFAULT_DATA };
     }
 
     loadDefault() {
         this.data.ticker = "SPY";
-        // Use the hardcoded default data
-        // It has the same structure as the API response: { data: [...], timestamp: ... }
-        if (DEFAULT_DATA.timestamp) {
-            this.data.timestamp = DEFAULT_DATA.timestamp;
+        // Use the cached default data
+        if (this.defaultData.timestamp) {
+            this.data.timestamp = this.defaultData.timestamp;
         }
 
-        // DEFAULT_DATA.data is the array of points
-        this.rawPoints = DEFAULT_DATA.data;
+        // this.defaultData.data is the array of points
+        this.rawPoints = this.defaultData.data;
         this.processReceivedData(this.rawPoints);
         return this.data;
     }
 
-    async loadData(ticker, type = 'Call', minVolume = 0, minOpenInterest = 0) {
-        if (!ticker) return;
+    updateDefault(rawData) {
+        if (rawData && rawData.data) {
+            this.defaultData = rawData;
+            console.log("Default data cache updated.");
+        }
+    }
 
-        this.data.ticker = ticker;
-
-        // Show loading indicator (basic implementation within class or callback?)
-        // For simplicity, we'll return a promise that resolves with data or rejects
-
+    async fetchRawData(ticker, type = 'Call') {
         try {
             const response = await fetch(`https://volsurface-backend-564066987828.us-central1.run.app/options-data?ticker=${ticker}&type=${type}`);
 
             if (!response.ok) {
-                // Determine if it might be a 500 error due to missing data vs other errors
-                // But generally, handle as generic load error or specific if status is 404
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
@@ -48,6 +47,21 @@ export class DataManager {
             if (jsonResponse.error) {
                 throw new Error(jsonResponse.error);
             }
+
+            return jsonResponse;
+        } catch (error) {
+            console.error("Error fetching raw data:", error);
+            throw error;
+        }
+    }
+
+    async loadData(ticker, type = 'Call', minVolume = 0, minOpenInterest = 0) {
+        if (!ticker) return;
+
+        this.data.ticker = ticker;
+
+        try {
+            const jsonResponse = await this.fetchRawData(ticker, type);
 
             let dataPoints;
             if (Array.isArray(jsonResponse)) {
@@ -198,5 +212,13 @@ export class DataManager {
         return data.map(row =>
             row.map(val => val !== null ? (val - min) / (max - min) : null)
         );
+    }
+
+    async wakeupBackend() {
+        try {
+            fetch('https://volsurface-backend-564066987828.us-central1.run.app/');
+        } catch (error) {
+            console.log("Wakeup call failed", error);
+        }
     }
 }
