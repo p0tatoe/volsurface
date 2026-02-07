@@ -28,9 +28,16 @@ export class DataManager {
     }
 
     updateDefault(rawData) {
-        if (rawData && rawData.data) {
+        if (!rawData) return;
+
+        if (Array.isArray(rawData)) {
+            // If rawData is just the array of points
+            this.defaultData = { data: rawData };
+            console.log("Default data cache updated (array format).");
+        } else if (rawData.data && Array.isArray(rawData.data)) {
+            // If rawData is the object with timestamp
             this.defaultData = rawData;
-            console.log("Default data cache updated.");
+            console.log("Default data cache updated (object format).");
         }
     }
 

@@ -67,7 +67,14 @@ export class InteractionHandler {
                     }
                 }
             } else {
-                document.getElementById('hoverInfo').innerHTML = '-';
+                const defaultInfoHtml = `Strike: -<br>` +
+                    `Days to Expiry: -<br>` +
+                    `Implied Volatility: -%<br><br>` +
+                    `<strong>-</strong><br>` +
+                    `Price: $-<br>` +
+                    `Bid/Ask: -/-<br>` +
+                    `Vol/OI: -/-`;
+                document.getElementById('hoverInfo').innerHTML = defaultInfoHtml;
                 if (this.surfaceVisualizer.highlightPoint) this.surfaceVisualizer.highlightPoint.visible = false;
             }
         }

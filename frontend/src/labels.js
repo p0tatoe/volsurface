@@ -9,12 +9,11 @@ export class LabelManager {
 
     createLabels(data, settings) {
         // Clear previous labels
-        if (this.labelGroup && this.labelGroup.traverse) {
-            this.labelGroup.traverse((object) => {
-                if (object.isCSS2DObject) {
-                    object.removeFromParent();
-                }
-            });
+        if (this.labelGroup) {
+            while (this.labelGroup.children.length > 0) {
+                const object = this.labelGroup.children[0];
+                object.removeFromParent();
+            }
             this.scene.remove(this.labelGroup);
         }
 
