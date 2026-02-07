@@ -57,7 +57,50 @@ export class App {
         this.animate();
 
         // Load default data
-        this.loadData();
+        this.loadDefaultData();
+    }
+
+    loadDefaultData() {
+        // Use the DataManager to load the hardcoded default
+        this.dataManager.loadDefault();
+
+        // Update UI info for the default data
+        // We know it's SPY and static for now
+        const ticker = "SPY";
+
+        document.getElementById('dataInfo').innerHTML =
+            `<strong>${ticker} (Default)</strong><br>` +
+            `${this.dataManager.data.expirations.length} expirations<br>` +
+            `${this.dataManager.data.strikes.length} strikes`;
+
+        // Update Dynamic Title
+        const titleElement = document.getElementById('dynamicTitle');
+        if (titleElement) {
+            let timeString = '';
+            if (this.dataManager.data.timestamp) {
+                const date = new Date(this.dataManager.data.timestamp);
+                const options = {
+                    year: 'numeric',
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    timeZone: 'America/New_York',
+                    timeZoneName: 'short'
+                };
+                timeString = new Intl.DateTimeFormat('en-US', options).format(date);
+            }
+            titleElement.textContent = `${ticker} as of ${timeString}`;
+        }
+
+        // Set ticker input value so user knows what they are looking at (or leave empty?)
+        // Let's set it to SPY
+        const tickerInput = document.getElementById('ticker');
+        if (tickerInput) tickerInput.value = "SPY";
+
+        // Visualize
+        this.surfaceVisualizer.createVolatilitySurface(this.dataManager, this.settings);
+        this.labelManager.createLabels(this.dataManager.data, this.settings);
     }
 
     async loadData() {

@@ -1,4 +1,6 @@
 
+import { DEFAULT_DATA } from './defaultData';
+
 export class DataManager {
     constructor() {
         this.data = {
@@ -8,6 +10,20 @@ export class DataManager {
             volatilityGrid: [],
             infoGrid: []
         };
+    }
+
+    loadDefault() {
+        this.data.ticker = "SPY";
+        // Use the hardcoded default data
+        // It has the same structure as the API response: { data: [...], timestamp: ... }
+        if (DEFAULT_DATA.timestamp) {
+            this.data.timestamp = DEFAULT_DATA.timestamp;
+        }
+
+        // DEFAULT_DATA.data is the array of points
+        this.rawPoints = DEFAULT_DATA.data;
+        this.processReceivedData(this.rawPoints);
+        return this.data;
     }
 
     async loadData(ticker, type = 'Call', minVolume = 0, minOpenInterest = 0) {
