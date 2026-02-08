@@ -70,6 +70,20 @@ export class DataManager {
         try {
             const jsonResponse = await this.fetchRawData(ticker, type);
 
+            // Handle new Geometry format
+            if (jsonResponse.geometry) {
+                this.data.geometry = jsonResponse.geometry;
+                this.rawPoints = jsonResponse.raw_points; // Note: backend sends snake_case 'raw_points'
+                this.data.timestamp = jsonResponse.timestamp;
+
+                // We still need to process raw points for the "spheres" and "infoGrid" (tooltips)
+                // But we skip the grid generation/smoothing for the surface itself.
+                this.processRawPointsForInteraction(this.rawPoints, minVolume, minOpenInterest);
+
+                return this.data;
+            }
+
+            // Fallback for old format (if any)
             let dataPoints;
             if (Array.isArray(jsonResponse)) {
                 dataPoints = jsonResponse;
@@ -84,7 +98,7 @@ export class DataManager {
                 throw new Error(`No data found for ${ticker}. If you are searching for an index, remember to add the ^`);
             }
 
-            this.rawPoints = dataPoints; // Store raw data for reprocessing
+            this.rawPoints = dataPoints;
             this.processReceivedData(dataPoints, minVolume, minOpenInterest);
 
             return this.data;
@@ -97,8 +111,66 @@ export class DataManager {
 
     reprocessData(minVolume, minOpenInterest) {
         if (this.rawPoints) {
-            this.processReceivedData(this.rawPoints, minVolume, minOpenInterest);
+            // If we have geometry, we might technically need to re-fetch to "filter" the surface...
+            // BUT, the backend filtering happens BEFORE surface generation. 
+            // So client-side filtering only affects the "dots", not the surface structure unless we re-call backend.
+            // For now, let's just re-filter the dots.
+            if (this.data.geometry) {
+                this.processRawPointsForInteraction(this.rawPoints, minVolume, minOpenInterest);
+            } else {
+                this.processReceivedData(this.rawPoints, minVolume, minOpenInterest);
+            }
         }
+    }
+
+    processRawPointsForInteraction(points, minVolume, minOpenInterest) {
+        // Create a simplified grid or list for the interaction handler and spheres
+        // We still need to normalize the raw points to match the surface's coordinate system [0,1]
+
+        if (!points) return;
+
+        const validPoints = [];
+
+        // We need to know the normalization ranges used by the backend to align dots with surface?
+        // The backend normalized [0,1] based on Min/Max of the PROCESSED data.
+        // We should try to replicate that or just trust the backend returned data is consistent?
+        // Actually, if we use the backend geometry, the surface is in [0,1] space.
+        // We need to map the raw points to [0,1] space too.
+
+        const expirations = points.map(p => p[0]);
+        const moneyness = points.map(p => p[2]);
+        const ivs = points.map(p => p[1]);
+
+        const minExp = Math.min(...expirations);
+        const maxExp = Math.max(...expirations);
+        const minMon = Math.min(...moneyness);
+        const maxMon = Math.max(...moneyness);
+        const minIV = Math.min(...ivs);
+        const maxIV = Math.max(...ivs);
+
+        // Helper to normalize
+        const norm = (val, min, max) => (max === min) ? 0.5 : (val - min) / (max - min);
+
+        // We need simple list of points with normalized coordinates
+        points.forEach(point => {
+            const [expiry, iv, mon, symbol, last, bid, ask, vol, oi] = point;
+
+            if (vol < minVolume || oi < minOpenInterest) return;
+
+            // Map to 3D coords: X=Moneyness, Y=IV, Z=Expiration (MATCHING BACKEND LINE 317)
+            const nx = norm(mon, minMon, maxMon);
+            const ny = norm(iv, minIV, maxIV); // Wait, backend uses global Z min/max?
+            const nz = norm(expiry, minExp, maxExp);
+
+            validPoints.push({
+                x: nx,
+                y: ny,
+                z: nz,
+                data: { symbol, last, bid, ask, vol, oi, expiry, mon, iv }
+            });
+        });
+
+        this.data.interactivePoints = validPoints;
     }
 
     processReceivedData(points, minVolume = 0, minOpenInterest = 0) {
@@ -201,7 +273,7 @@ export class DataManager {
 
     normalizeData() {
         const data = this.data.volatilityGrid;
-
+        const rows = data.length;
         // Find min and max values
         let min = Infinity;
         let max = -Infinity;

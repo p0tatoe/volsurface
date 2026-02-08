@@ -52,12 +52,11 @@ export class SceneManager {
         this.scene.add(directionalLight);
 
         // Add grid
-        const gridHelper = new THREE.GridHelper(10, 10);
+        const gridHelper = new THREE.GridHelper(8, 5, 0x555555, 0x333333);
         this.scene.add(gridHelper);
 
-        // Add axes
-        const axesHelper = new THREE.AxesHelper(5);
-        this.scene.add(axesHelper);
+        // Add custom axes
+        this.createCustomAxes();
 
         // Setup resize handler
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -78,5 +77,48 @@ export class SceneManager {
     render() {
         this.renderer.render(this.scene, this.camera);
         this.labelRenderer.render(this.scene, this.camera);
+    }
+
+    createCustomAxes() {
+        const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+        const vertices = [];
+
+        // X-Axis (at z=5.5)
+        // Main line
+        vertices.push(-4, 0, 5.5, 4, 0, 5.5);
+        // Ticks
+        const xSteps = 5;
+        for (let i = 0; i <= xSteps; i++) {
+            const t = i / xSteps;
+            const x = -4 + t * 8;
+            vertices.push(x, 0, 5.5, x, 0, 5.3);
+        }
+
+        // Z-Axis (at x=-5.5)
+        // Main line
+        vertices.push(-5.5, 0, -4, -5.5, 0, 4);
+        // Ticks
+        const zSteps = 5;
+        for (let i = 0; i <= zSteps; i++) {
+            const t = i / zSteps;
+            const z = -4 + t * 8;
+            vertices.push(-5.5, 0, z, -5.3, 0, z);
+        }
+
+        // Y-Axis (at x=-5.5, z=-5.5)
+        // Main line
+        vertices.push(-5.5, 0, -5.5, -5.5, 4, -5.5);
+        // Ticks
+        const ySteps = 4;
+        for (let i = 0; i <= ySteps; i++) {
+            const t = i / ySteps;
+            const y = 0 + t * 4;
+            vertices.push(-5.5, y, -5.5, -5.3, y, -5.5);
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        const axes = new THREE.LineSegments(geometry, material);
+        this.scene.add(axes);
     }
 }

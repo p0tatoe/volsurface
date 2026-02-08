@@ -29,6 +29,15 @@ export class App {
         // Setup UI event listeners
         document.getElementById('loadButton').addEventListener('click', () => this.loadData());
 
+        const tickerInput = document.getElementById('ticker');
+        if (tickerInput) {
+            tickerInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    this.loadData();
+                }
+            });
+        }
+
         const minVolumeInput = document.getElementById('minVolume');
         const minOpenInterestInput = document.getElementById('minOpenInterest');
 

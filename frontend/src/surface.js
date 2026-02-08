@@ -27,24 +27,77 @@ export class SurfaceVisualizer {
             this.createHighlightPoint();
         }
 
-        // Remove previous surface if it exists
+        // Remove previous surface
         if (this.volatilitySurface) {
             this.scene.remove(this.volatilitySurface);
             this.volatilitySurface.geometry.dispose();
             this.volatilitySurface.material.dispose();
+            this.volatilitySurface = null;
         }
 
-        // Remove previous points if they exist
+        // Remove previous points
         if (this.pointsMesh) {
             this.scene.remove(this.pointsMesh);
             this.pointsMesh.geometry.dispose();
             this.pointsMesh.material.dispose();
+            this.pointsMesh = null;
         }
 
-        // Hide highlight point initially
         this.highlightPoint.visible = false;
 
+        // Check if we have pre-calculated geometry
+        if (dataManager.data.geometry) {
+            const { position, index, color } = dataManager.data.geometry;
 
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(color, 3));
+            geometry.setIndex(index);
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                roughness: 0.5,
+                metalness: 0.1,
+                flatShading: false // Smooth shading for RBF
+            });
+
+            this.volatilitySurface = new THREE.Mesh(geometry, material);
+            // Scale and position: Frontend maps [0,1] keys to world coordinates
+            // Map 0..1 to -4..4 range
+            // position.x, y, z are already 0..1 from backend
+
+            this.volatilitySurface.scale.set(8, 4, 8);
+            this.volatilitySurface.position.set(-4, 0, -4);
+
+            this.scene.add(this.volatilitySurface);
+
+            // --- Interactive Points (Spheres) ---
+            if (dataManager.data.interactivePoints && dataManager.data.interactivePoints.length > 0) {
+                const points = dataManager.data.interactivePoints;
+                const sphereGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+                const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+
+                this.pointsMesh = new THREE.InstancedMesh(sphereGeometry, sphereMaterial, points.length);
+
+                const dummy = new THREE.Object3D();
+                points.forEach((p, i) => {
+                    // Scale to world
+                    dummy.position.set(p.x * 8 - 4, p.y * 4, p.z * 8 - 4);
+                    dummy.scale.set(1, 1, 1);
+                    dummy.updateMatrix();
+                    this.pointsMesh.setMatrixAt(i, dummy.matrix);
+                });
+
+                this.pointsMesh.instanceMatrix.needsUpdate = true;
+                this.scene.add(this.pointsMesh);
+            }
+
+            return;
+        }
+
+        // --- Fallback to Old Grid Logic ---
         if (dataManager.data.volatilityGrid.length === 0) return;
 
         // Normalize data for visualization
@@ -120,7 +173,6 @@ export class SurfaceVisualizer {
         geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         geometry.computeVertexNormals();
 
-        // Create material
         // Create material
         const material = new THREE.MeshStandardMaterial({
             vertexColors: true,
